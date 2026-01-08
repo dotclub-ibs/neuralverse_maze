@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universe 3: Neural Labyrinth</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Black+Ops+One&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* --- 1. CORE STYLES --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+        body {
+            background: radial-gradient(circle at 50% 50%, #0f0806 0%, #000000 100%);
+            color: #ff5722;
+            font-family: 'Share Tech Mono', monospace;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            touch-action: none;
+        }
+
+        /* --- BACKGROUND FX --- */
+        #neural-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; opacity: 0.5; pointer-events: none;
+        }
+
+        /* --- HEADER & FOOTER --- */
+        .ui-bar {
+            position: relative;
+            width: 100%;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            padding: 10px 40px;
+            background: rgba(0, 0, 0, 0.6);
+            border-bottom: 1px solid rgba(255, 87, 34, 0.3);
+            backdrop-filter: blur(5px);
+            flex-shrink: 0;
+        }
+
+        #header-bar { justify-content: space-between; height: 80px; }
+        
+        #footer-bar { 
+            justify-content: space-between; 
+            height: 60px; 
+            border-bottom: none; 
+            border-top: 1px solid rgba(255, 87, 34, 0.3);
+            font-size: 0.9rem; color: #ffab91;
+        }
+
+        .logo-img { height: 50px; width: auto; object-fit: contain; }
+
+        .footer-socials { display: flex; align-items: center; gap: 15px; }
+        .social-link { color: #fff; font-size: 1.5rem; transition: 0.3s; }
+        .social-link:hover { color: #ff5722; transform: scale(1.2); }
+
+        /* --- UI SCREENS --- */
+        .screen {
+            display: none;
+            z-index: 10;
+            width: 100%;
+            flex: 1; 
+            position: relative;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .screen.active { display: flex; }
+
+        h1 {
+            font-family: 'Black Ops One', cursive;
+            font-size: 3rem; color: #ffccbc;
+            text-shadow: 4px 4px 0px #bf360c;
+            margin-bottom: 20px; text-transform: uppercase; letter-spacing: 3px;
+            text-align: center;
+        }
+
+        /* --- FORM STYLES --- */
+        .form-box {
+            background: rgba(20, 10, 5, 0.9);
+            border: 2px solid #bf360c;
+            padding: 40px; 
+            width: 600px; 
+            max-width: 95%;
+            box-shadow: 0 0 50px rgba(191, 54, 12, 0.4);
+            text-align: center;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        input {
+            width: 100%; padding: 15px; margin: 0;
+            background: #2a1510; border: 1px solid #ff5722;
+            color: #ffab91; font-family: 'Share Tech Mono'; font-size: 1.1rem; outline: none;
+        }
+        #teamEmail, button { grid-column: span 2; }
+
+        input:focus { box-shadow: 0 0 15px #ff5722; border-color: #ffccbc; }
+
+        button {
+            margin-top: 10px; padding: 15px 40px;
+            background: #ff5722; color: #1a0500;
+            font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1.2rem;
+            border: none; cursor: pointer; transition: 0.3s;
+            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+        }
+        button:hover { background: #ffccbc; box-shadow: 0 0 20px #ff5722; }
+
+        /* --- POPUPS --- */
+        .popup-content {
+            max-width: 600px;
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            border: 2px solid #ff5722;
+            padding: 30px; text-align: center;
+            box-shadow: 0 0 60px rgba(191, 54, 12, 0.5);
+        }
+        .guidelines-list { text-align: left; margin: 20px 0; color: #d7ccc8; font-size: 1.1rem; line-height: 1.6; }
+        .guidelines-list li { margin-bottom: 10px; list-style: square inside; }
+
+        /* --- MASTER LEVEL WARNING --- */
+        .master-warning-box {
+            max-width: 700px;
+            background: #000;
+            border: 4px solid #ff0000;
+            padding: 40px; text-align: center;
+            box-shadow: 0 0 80px #ff0000, inset 0 0 50px #500;
+            animation: pulseWarning 2s infinite;
+        }
+
+        /* --- GAME INTERFACE --- */
+        .game-layout { display: flex; align-items: center; gap: 40px; }
+
+        #maze-container {
+            position: relative;
+            border: 4px solid #5d4037;
+            box-shadow: 0 0 30px #ff5722;
+            background: rgba(10, 5, 2, 0.95);
+            cursor: crosshair;
+        }
+        canvas#mazeCanvas { display: block; }
+
+        .sidebar { width: 250px; text-align: right; display: flex; flex-direction: column; gap: 20px; }
+        .hud-panel { background: rgba(40, 20, 10, 0.8); border: 1px solid #ff5722; padding: 15px; }
+        .hud-label { font-size: 0.8rem; color: #ffab91; display: block; margin-bottom: 5px; }
+        .hud-value { font-family: 'Orbitron'; font-size: 2.5rem; color: #fff; text-shadow: 0 0 10px #ff5722; }
+        .hud-value.warning { color: #ff0000; animation: pulseRed 0.5s infinite; }
+
+        /* --- BUFFER SCREEN --- */
+        #buffer-content {
+            text-align: center; background: rgba(0,0,0,0.9);
+            padding: 50px; border: 2px solid #ff5722;
+            box-shadow: 0 0 50px #ff5722;
+        }
+        .buffer-timer { font-family: 'Orbitron'; font-size: 6rem; color: #fff; display: block; margin: 20px 0; }
+        .buffer-btn-row { display: flex; gap: 20px; justify-content: center; }
+        .pause-btn { background: #ff9800; color: #000; }
+        .resume-btn { background: #00ff00; color: #000; display: none; }
+        
+        /* --- OUTRO SCREEN --- */
+        #screen-end { background: #000; }
+        .outro-text {
+            font-family: 'Orbitron'; font-size: 4rem; color: #00ff00;
+            text-shadow: 0 0 20px #00ff00, 0 0 40px #0000ff;
+            animation: textFlicker 2s infinite alternate;
+            text-align: center;
+        }
+        
+        /* --- OVERLAYS --- */
+        .level-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none; justify-content: center; align-items: center;
+            flex-direction: column; z-index: 50;
+        }
+        .level-overlay h2 { font-family: 'Orbitron'; font-size: 3rem; color: #ff5722; }
+        .level-msg { font-size: 1.2rem; margin-top: 10px; color: #fff; }
+
+        @keyframes pulseWarning { 0% { box-shadow: 0 0 40px #ff0000; } 50% { box-shadow: 0 0 80px #ff0000; } 100% { box-shadow: 0 0 40px #ff0000; } }
+        @keyframes pulseRed { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        @keyframes textFlicker { 0% { opacity: 1; } 50% { opacity: 0.8; text-shadow: 0 0 10px #00ff00; } 100% { opacity: 1; } }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="neural-canvas"></canvas>
+
+    <div id="header-bar" class="ui-bar">
+        <img src="https://i.postimg.cc/d1yRJWqp/Dot-transparent.png" alt="Logo L" class="logo-img">
+        <img src="https://i.postimg.cc/50R5Vhdm/Trishna-2K26-White-Logo-removebg-preview.png" alt="Logo M" class="logo-img">
+        <img src="https://i.postimg.cc/tCMc8J8Y/IBS-TRansparent.png" alt="Logo R" class="logo-img">
+    </div>
+
+    <div id="screen-login" class="screen active">
+        <h1>ACCESS PROTOCOL</h1>
+        <div class="form-box">
+            <input type="text" id="teamName" placeholder="TEAM NAME" required>
+            <input type="number" id="teamNumber" placeholder="TEAM NUMBER" required>
+            <input type="text" id="collegeName" placeholder="COLLEGE NAME">
+            <input type="number" id="phoneNum" placeholder="PHONE NUMBER">
+            <input type="email" id="teamEmail" placeholder="OFFICIAL MAIL ID" required>
+            <button onclick="goToGuidelines()">ENTER</button>
+        </div>
+    </div>
+
+    <div id="screen-guidelines" class="screen">
+        <div class="popup-content">
+            <h1 style="font-size:2rem; margin-bottom:20px;">MISSION BRIEF</h1>
+            <ul class="guidelines-list">
+                <li><strong>OBJECTIVE:</strong> Guide the Spaceship to the Vortex Portal.</li>
+                <li><strong>CONTROLS:</strong> Drag Mouse or use Arrow Keys.</li>
+                <li><strong>LEVELS:</strong> 15 Sectors + 2 Master Sectors.</li>
+                <li><strong>TIME:</strong> Strict limits per sector.</li>
+            </ul>
+            <button onclick="startGame()">INITIATE</button>
+        </div>
+    </div>
+
+    <div id="screen-game" class="screen">
+        <div class="game-layout">
+            <div id="maze-container">
+                <canvas id="mazeCanvas"></canvas>
+                <div id="level-transition" class="level-overlay">
+                    <h2 id="trans-title">SECTOR CLEARED</h2>
+                    <p class="level-msg">INITIALIZING NEXT SECTOR...</p>
+                </div>
+            </div>
+            <div class="sidebar">
+                <div class="hud-panel">
+                    <span class="hud-label">TIME REMAINING</span>
+                    <span class="hud-value" id="timer-display">30</span>
+                </div>
+                <div class="hud-panel">
+                    <span class="hud-label">SECTOR</span>
+                    <span class="hud-value" id="level-display">1/17</span>
+                </div>
+                <div class="hud-panel">
+                    <span class="hud-label">STEPS TAKEN</span>
+                    <span class="hud-value" id="step-display">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-buffer" class="screen">
+        <div id="buffer-content">
+            <h2 style="color:#ffab91;">LOADING SECTOR...</h2>
+            <span class="buffer-timer" id="buffer-timer-val">5</span>
+            <div>
+                <button onclick="togglePause()" id="btn-pause">PAUSE</button>
+                <button onclick="togglePause()" id="btn-resume" style="display:none; background:#00ff00; color:#000;">RESUME</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-master-intro" class="screen">
+        <div class="master-warning-box">
+            <h1 style="color:#ff0000; font-size:3.5rem;">WARNING</h1>
+            <h2 style="color:#fff; margin-bottom:20px;">ANOMALY DETECTED</h2>
+            <p style="font-size:1.2rem; color:#ffaaaa; line-height:1.5; margin-bottom:30px;">
+                Approaching Event Horizon Core.<br>
+                <strong>2 MASTER SECTORS DETECTED</strong><br><br>
+                Grid Size: <strong>25x25 (MASSIVE)</strong><br>
+                Time Limit: <strong>90 SECONDS EACH</strong><br>
+                Difficulty: <strong>EXTREME</strong>
+            </p>
+            <button onclick="startLevel()" style="background:#ff0000; color:#fff; box-shadow:0 0 30px #ff0000;">ENTER THE VOID</button>
+        </div>
+    </div>
+
+    <div id="screen-end" class="screen">
+        <h1 class="outro-text">CHALLENGE CLEARED</h1>
+    </div>
+
+    <div id="footer-bar" class="ui-bar">
+        <div style="font-weight: bold;">Built by DOT CLUB, IBS</div>
+        <div class="footer-socials">
+            <span>Follow us on:</span>
+            <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+            <a href="#" class="social-link"><i class="fab fa-linkedin"></i></a>
+        </div>
+    </div>
+
+    <script type="module">
+        // --------------------------------------------------------
+        // 1. FIREBASE CONFIGURATION & INITIALIZATION (FIRESTORE)
+        // --------------------------------------------------------
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+        // NOTE: We need 'doc' and 'updateDoc' for updating existing records
+        import { getFirestore, collection, addDoc, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
+
+        // *** YOUR CONFIGURATION ***
+        const firebaseConfig = {
+            apiKey: "AIzaSyDKzdReRkiS71CqF2MCkpfNkBQ0Vg2G0ys",
+            authDomain: "trishna-a55e8.firebaseapp.com",
+            projectId: "trishna-a55e8",
+            storageBucket: "trishna-a55e8.firebasestorage.app",
+            messagingSenderId: "908132165308",
+            appId: "1:908132165308:web:4172097ac1c4913e2312b9",
+            measurementId: "G-D1YZ5N8RSE"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app); 
+
+        // --------------------------------------------------------
+        // 2. GAME ASSETS & CONFIGURATION
+        // --------------------------------------------------------
+        const TOTAL_LEVELS = 17; 
+        const spaceshipImg = new Image();
+        spaceshipImg.src = 'https://i.postimg.cc/T3dKttB2/vecteezy-orbital-satellite-with-solar-panels-46334662-removebg-preview.png'; 
+
+        const LEVEL_CONFIG = [
+            // Levels 1-5 (10x10, 30s)
+            {size:10, time:30, seed:101}, {size:10, time:30, seed:102},
+            {size:10, time:30, seed:103}, {size:10, time:30, seed:104}, {size:10, time:30, seed:105},
+            // Levels 6-10 (12x12, 45s)
+            {size:12, time:45, seed:201}, {size:12, time:45, seed:202},
+            {size:12, time:45, seed:203}, {size:12, time:45, seed:204}, {size:12, time:45, seed:205},
+            // Levels 11-15 (15x15, 60s)
+            {size:15, time:60, seed:301}, {size:15, time:60, seed:302},
+            {size:15, time:60, seed:303}, {size:15, time:60, seed:304}, {size:15, time:60, seed:305},
+            // Level 16 (MASTER 1: 25x25, 90s)
+            {size:25, time:90, seed:999},
+            // Level 17 (MASTER 2: 25x25, 90s)
+            {size:25, time:90, seed:1000}
+        ];
+
+        // --------------------------------------------------------
+        // 3. GLOBAL VARIABLES
+        // --------------------------------------------------------
+        // Holds the unique ID of the document created for this session
+        let currentUserDocId = null;
+
+        // Game State
+        let currentLevel = 1;
+        let timeLeft = 30;
+        let timerInterval = null;
+        let maze = [];
+        let player = {x:0, y:0};
+        let goal = {x:0, y:0};
+        let trail = []; 
+        let isDragging = false;
+        let cols, rows, cellSize;
+        
+        let seedVal = 1;
+        function random() { let x = Math.sin(seedVal++) * 10000; return x - Math.floor(x); }
+
+        let levelSteps = 0; 
+        
+        let bufferTime = 5;
+        let bufferInterval = null;
+        let isPaused = false;
+
+        // Elements
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+        const timerDisplay = document.getElementById('timer-display');
+        const levelDisplay = document.getElementById('level-display');
+        const stepDisplay = document.getElementById('step-display'); 
+        const bufferTimerVal = document.getElementById('buffer-timer-val');
+        const btnPause = document.getElementById('btn-pause');
+        const btnResume = document.getElementById('btn-resume');
+        const transOverlay = document.getElementById('level-transition');
+        const transTitle = document.getElementById('trans-title');
+
+        // --------------------------------------------------------
+        // 4. CANVAS SIZING
+        // --------------------------------------------------------
+        let canvasSize = 600;
+        function updateCanvasSize() {
+            const header = document.getElementById('header-bar');
+            const footer = document.getElementById('footer-bar');
+            const hHeight = header ? header.offsetHeight : 80;
+            const fHeight = footer ? footer.offsetHeight : 60;
+            const availableHeight = window.innerHeight - hHeight - fHeight - 40;
+            const availableWidth = window.innerWidth - 300;
+            canvasSize = Math.floor(Math.min(availableHeight, availableWidth));
+            if (canvasSize < 300) canvasSize = 300;
+            canvas.width = canvasSize;
+            canvas.height = canvasSize;
+            if (typeof cols !== 'undefined' && cols > 0) cellSize = canvasSize / cols;
+            if(document.getElementById('screen-game').classList.contains('active') && maze.length > 0) drawMaze();
+        }
+        window.addEventListener('resize', updateCanvasSize);
+        window.addEventListener('load', updateCanvasSize);
+
+        // --------------------------------------------------------
+        // 5. NAVIGATION & USER INPUT (Mapped to Window)
+        // --------------------------------------------------------
+        
+        // STEP 1: INITIAL SAVE - Create the document in 'users' collection
+        window.goToGuidelines = async function() {
+            const tName = document.getElementById('teamName').value.trim();
+            const tNum = document.getElementById('teamNumber').value.trim();
+            const col = document.getElementById('collegeName').value.trim();
+            const ph = document.getElementById('phoneNum').value.trim();
+            const mail = document.getElementById('teamEmail').value.trim();
+            
+            if(tName === "" || tNum === "" || mail === "") { 
+                alert("PLEASE FILL ALL REQUIRED FIELDS (Team Name, Number, Email)"); 
+                return; 
+            }
+
+            // Create initial data object
+            const initialUserData = {
+                teamName: tName,
+                teamNumber: tNum,
+                college: col,
+                phone: ph,
+                email: mail,
+                createdAt: serverTimestamp() // Record when they started
+            };
+
+            // Disable button to prevent double clicks
+            const enterBtn = document.querySelector('.form-box button');
+            enterBtn.innerText = "SAVING...";
+            enterBtn.disabled = true;
+
+            try {
+                // Create new document in 'users' collection
+                const docRef = await addDoc(collection(db, "users"), initialUserData);
+                currentUserDocId = docRef.id; // STORE THE ID for updates later
+                console.log("User Document Created with ID: ", currentUserDocId);
+
+                // Move to next screen
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById('screen-guidelines').classList.add('active');
+            } catch (e) {
+                console.error("Error creating user document: ", e);
+                alert("Error connecting to database. Please check console.");
+                enterBtn.innerText = "ENTER";
+                enterBtn.disabled = false;
+            }
+        }
+
+        window.startGame = function() {
+            currentLevel = 1;
+            startBuffer();
+        }
+
+        window.togglePause = function() {
+            isPaused = !isPaused;
+            if(isPaused) {
+                btnPause.style.display = 'none';
+                btnResume.style.display = 'inline-block';
+                bufferTimerVal.innerText = "PAUSED";
+            } else {
+                btnPause.style.display = 'inline-block';
+                btnResume.style.display = 'none';
+                bufferTimerVal.innerText = bufferTime;
+            }
+        }
+
+        window.startLevel = function() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-game').classList.add('active');
+            updateCanvasSize();
+
+            const config = LEVEL_CONFIG[currentLevel - 1];
+            seedVal = config.seed;
+            timeLeft = config.time;
+            
+            levelSteps = 0;
+            stepDisplay.innerText = "0"; 
+            
+            trail = [];
+            isDragging = false;
+            
+            updateTimerDisplay();
+            levelDisplay.innerText = `${currentLevel}/${TOTAL_LEVELS}`;
+            transOverlay.style.display = 'none';
+            
+            let minPaths = 2; 
+            if (currentLevel > 5) minPaths = 3;
+            if (currentLevel > 10) minPaths = 4;
+            if (currentLevel >= 16) minPaths = 5;
+
+            generateMaze(config.size, config.size, minPaths);
+            
+            player = {x:0, y:0};
+            goal = {x:config.size-1, y:config.size-1};
+            trail = [{x:0, y:0}];
+            
+            drawMaze();
+
+            if(timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if(timeLeft <= 0) endLevel(false);
+            }, 1000);
+        }
+
+        function showMasterIntro() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-master-intro').classList.add('active');
+        }
+
+        function startBuffer() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('screen-buffer').classList.add('active');
+            
+            bufferTime = 5;
+            isPaused = false;
+            bufferTimerVal.innerText = bufferTime;
+            btnPause.style.display = 'inline-block';
+            btnResume.style.display = 'none';
+
+            if(bufferInterval) clearInterval(bufferInterval);
+            bufferInterval = setInterval(() => {
+                if(!isPaused) {
+                    bufferTime--;
+                    bufferTimerVal.innerText = bufferTime;
+                    if(bufferTime <= 0) {
+                        clearInterval(bufferInterval);
+                        if (currentLevel === 16) {
+                            showMasterIntro();
+                        } else {
+                            window.startLevel();
+                        }
+                    }
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            timerDisplay.innerText = timeLeft < 10 ? `0${timeLeft}` : timeLeft;
+            if(timeLeft <= 5) timerDisplay.classList.add('warning');
+            else timerDisplay.classList.remove('warning');
+        }
+
+        // --------------------------------------------------------
+        // 6. END LEVEL LOGIC & FIREBASE UPDATE
+        // --------------------------------------------------------
+        async function endLevel(success) {
+            clearInterval(timerInterval);
+            
+            // 1. Calculate Performance Metrics
+            const configTime = LEVEL_CONFIG[currentLevel-1].time;
+            const actualTimeTaken = success ? (configTime - timeLeft) : configTime; 
+            const statusStr = success ? "CLEARED" : "FAILED";
+
+            // 2. Prepare Update Object
+            // We use dynamic keys to create fields like status_1, timetaken_1, etc.
+            const updateData = {};
+            updateData[`status_${currentLevel}`] = statusStr;
+            updateData[`timetaken_${currentLevel}`] = actualTimeTaken;
+            updateData[`steps_${currentLevel}`] = levelSteps;
+            updateData['last_updated'] = serverTimestamp(); // Update timestamp every level
+
+            // 3. Update the EXISTING document in Firestore
+            if (currentUserDocId) {
+                try {
+                    const userDocRef = doc(db, "users", currentUserDocId);
+                    await updateDoc(userDocRef, updateData);
+                    console.log(`Level ${currentLevel} data appended to document ${currentUserDocId}`);
+                } catch (e) {
+                    console.error("Error updating level data: ", e);
+                }
+            } else {
+                console.error("No user ID found! Cannot save level data.");
+            }
+
+            // 4. UI Feedback
+            transOverlay.style.display = 'flex';
+            if(success) {
+                transTitle.innerText = "SECTOR CLEARED";
+                transTitle.style.color = "#00ff00";
+            } else {
+                transTitle.innerText = "TIME EXPIRED";
+                transTitle.style.color = "#ff0000";
+            }
+
+            setTimeout(() => {
+                currentLevel++;
+                if(currentLevel > TOTAL_LEVELS) {
+                    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                    document.getElementById('screen-end').classList.add('active');
+                } else {
+                    startBuffer();
+                }
+            }, 1500);
+        }
+
+        // --------------------------------------------------------
+        // 7. MAZE GENERATION & LOGIC
+        // --------------------------------------------------------
+        function generateMaze(c, r, extraPaths) {
+            cols = c; rows = r;
+            cellSize = canvasSize / cols;
+            maze = [];
+            for (let y = 0; y < rows; y++) {
+                let row = [];
+                for (let x = 0; x < cols; x++) {
+                    row.push({ x, y, top: true, right: true, bottom: true, left: true, visited: false });
+                }
+                maze.push(row);
+            }
+            let stack = [];
+            let current = maze[0][0];
+            current.visited = true;
+            do {
+                let next = getNeighbor(current);
+                if (next) {
+                    stack.push(current);
+                    removeWalls(current, next);
+                    current = next;
+                    current.visited = true;
+                } else if (stack.length > 0) current = stack.pop();
+            } while (stack.length > 0);
+
+            const totalCells = cols * rows;
+            const wallsToRemove = Math.floor(totalCells * (extraPaths * 0.05));
+            for(let i=0; i < wallsToRemove; i++) {
+                let rx = Math.floor(random()*(cols-2))+1;
+                let ry = Math.floor(random()*(rows-2))+1;
+                let cell = maze[ry][rx];
+                
+                let wallIdx = Math.floor(random() * 4);
+                if(wallIdx === 0 && cell.top && ry > 0) { cell.top = false; maze[ry-1][rx].bottom = false; }
+                else if(wallIdx === 1 && cell.right && rx < cols-1) { cell.right = false; maze[ry][rx+1].left = false; }
+                else if(wallIdx === 2 && cell.bottom && ry < rows-1) { cell.bottom = false; maze[ry+1][rx].top = false; }
+                else if(wallIdx === 3 && cell.left && rx > 0) { cell.left = false; maze[ry][rx-1].right = false; }
+            }
+        }
+
+        function getNeighbor(cell) {
+            let neighbors = [];
+            if (cell.y > 0 && !maze[cell.y-1][cell.x].visited) neighbors.push(maze[cell.y-1][cell.x]);
+            if (cell.x < cols-1 && !maze[cell.y][cell.x+1].visited) neighbors.push(maze[cell.y][cell.x+1]);
+            if (cell.y < rows-1 && !maze[cell.y+1][cell.x].visited) neighbors.push(maze[cell.y+1][cell.x]);
+            if (cell.x > 0 && !maze[cell.y][cell.x-1].visited) neighbors.push(maze[cell.y][cell.x-1]);
+            return neighbors.length > 0 ? neighbors[Math.floor(random()*neighbors.length)] : undefined;
+        }
+
+        function removeWalls(a, b) {
+            let x = a.x - b.x;
+            if (x === 1) { a.left = false; b.right = false; }
+            else if (x === -1) { a.right = false; b.left = false; }
+            let y = a.y - b.y;
+            if (y === 1) { a.top = false; b.bottom = false; }
+            else if (y === -1) { a.bottom = false; b.top = false; }
+        }
+
+        function movePlayer(nx, ny) {
+            if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) return;
+            const cell = maze[player.y][player.x];
+            let allowed = false;
+            if (nx === player.x + 1 && !cell.right) allowed = true;
+            if (nx === player.x - 1 && !cell.left) allowed = true;
+            if (ny === player.y + 1 && !cell.bottom) allowed = true;
+            if (ny === player.y - 1 && !cell.top) allowed = true;
+
+            if(allowed) {
+                if(trail.length > 1 && trail[trail.length-2].x === nx && trail[trail.length-2].y === ny) {
+                    trail.pop();
+                } else {
+                    trail.push({x:nx, y:ny});
+                }
+                
+                levelSteps++; 
+                stepDisplay.innerText = levelSteps;
+
+                player.x = nx; player.y = ny;
+                drawMaze();
+                if(player.x === goal.x && player.y === goal.y) endLevel(true);
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if(!document.getElementById('screen-game').classList.contains('active')) return;
+            if(e.key === 'ArrowUp' || e.key === 'w') movePlayer(player.x, player.y-1);
+            if(e.key === 'ArrowDown' || e.key === 's') movePlayer(player.x, player.y+1);
+            if(e.key === 'ArrowLeft' || e.key === 'a') movePlayer(player.x-1, player.y);
+            if(e.key === 'ArrowRight' || e.key === 'd') movePlayer(player.x+1, player.y);
+        });
+
+        // Mouse Drag
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: Math.floor((cx-rect.left)/cellSize), y: Math.floor((cy-rect.top)/cellSize) };
+        }
+        canvas.addEventListener('mousedown', (e) => {
+            const p = getPos(e);
+            if(p.x === player.x && p.y === player.y) isDragging = true;
+        });
+        canvas.addEventListener('mousemove', (e) => {
+            if(isDragging) {
+                const p = getPos(e);
+                if(p.x !== player.x || p.y !== player.y) movePlayer(p.x, p.y);
+            }
+        });
+        window.addEventListener('mouseup', () => isDragging = false);
+        canvas.addEventListener('touchstart', (e) => {
+            const p = getPos(e);
+            if(p.x === player.x && p.y === player.y) isDragging = true;
+        }, {passive:false});
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if(isDragging) {
+                const p = getPos(e);
+                if(p.x !== player.x || p.y !== player.y) movePlayer(p.x, p.y);
+            }
+        }, {passive:false});
+        window.addEventListener('touchend', () => isDragging = false);
+
+        // --- DRAWING ---
+        function drawMaze() {
+            ctx.fillStyle = "rgba(10, 5, 2, 0.95)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.lineWidth = 2; ctx.strokeStyle = "#5d4037"; ctx.lineCap = "round";
+
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    let cell = maze[y][x];
+                    let px = x * cellSize; let py = y * cellSize;
+                    ctx.beginPath();
+                    if (cell.top) { ctx.moveTo(px, py); ctx.lineTo(px + cellSize, py); }
+                    if (cell.right) { ctx.moveTo(px + cellSize, py); ctx.lineTo(px + cellSize, py + cellSize); }
+                    if (cell.bottom) { ctx.moveTo(px, py + cellSize); ctx.lineTo(px + cellSize, py + cellSize); }
+                    if (cell.left) { ctx.moveTo(px, py); ctx.lineTo(px, py + cellSize); }
+                    ctx.stroke();
+                }
+            }
+
+            if (trail.length > 1) {
+                ctx.beginPath();
+                ctx.lineWidth = cellSize / 3;
+                ctx.strokeStyle = "rgba(255, 87, 34, 0.5)"; 
+                ctx.lineJoin = "round";
+                let startX = trail[0].x * cellSize + cellSize / 2;
+                let startY = trail[0].y * cellSize + cellSize / 2;
+                ctx.moveTo(startX, startY);
+                for (let i = 1; i < trail.length; i++) {
+                    ctx.lineTo(trail[i].x * cellSize + cellSize / 2, trail[i].y * cellSize + cellSize / 2);
+                }
+                ctx.stroke();
+            }
+
+            drawPortal(goal.x, goal.y);
+            drawSpaceship(player.x, player.y);
+        }
+
+        function drawSpaceship(gx, gy) {
+            const x = gx * cellSize;
+            const y = gy * cellSize;
+            if(spaceshipImg.complete) {
+                ctx.drawImage(spaceshipImg, x + 2, y + 2, cellSize - 4, cellSize - 4);
+            } else {
+                ctx.fillStyle = "cyan"; ctx.beginPath(); ctx.arc(x+cellSize/2, y+cellSize/2, cellSize/3, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        let portalRot = 0;
+        function drawPortal(gx, gy) {
+            const x = gx * cellSize + cellSize / 2;
+            const y = gy * cellSize + cellSize / 2;
+            const r = cellSize * 0.45;
+            portalRot += 0.05;
+            ctx.save(); ctx.translate(x, y); ctx.rotate(portalRot);
+            ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.beginPath(); ctx.arc(0,0, r, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = "#4a148c"; ctx.lineWidth = 3;
+            ctx.beginPath();
+            for(let j=0; j<3; j++) {
+                ctx.rotate(Math.PI/3); ctx.moveTo(0,0);
+                for(let i=0; i<20; i++) { let angle = 0.3 * i; let dist = r * (i/20); ctx.lineTo(Math.cos(angle)*dist, Math.sin(angle)*dist); }
+            }
+            ctx.stroke();
+            ctx.rotate(-portalRot * 2); ctx.fillStyle = "rgba(100, 100, 255, 0.5)"; ctx.beginPath(); ctx.arc(r/2, 0, 2, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+        }
+
+        function visualLoop() {
+            if(document.getElementById('screen-game').classList.contains('active')) drawMaze();
+            requestAnimationFrame(visualLoop);
+        }
+        visualLoop();
+
+        // --- BACKGROUND NEURONS ---
+        const bgCanvas = document.getElementById('neural-canvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        let bgW, bgH, particles = [];
+        function resizeBg() { bgW = window.innerWidth; bgH = window.innerHeight; bgCanvas.width=bgW; bgCanvas.height=bgH; }
+        window.addEventListener('resize', resizeBg); resizeBg();
+        class Neuron {
+            constructor() { this.x=Math.random()*bgW; this.y=Math.random()*bgH; this.vx=(Math.random()-0.5); this.vy=(Math.random()-0.5); this.size=Math.random()*3+2; }
+            update() { this.x+=this.vx; this.y+=this.vy; if(this.x<0||this.x>bgW) this.vx*=-1; if(this.y<0||this.y>bgH) this.vy*=-1; }
+        }
+        for(let i=0; i<70; i++) particles.push(new Neuron());
+        function animateBg() {
+            bgCtx.clearRect(0,0,bgW,bgH); bgCtx.strokeStyle="rgba(255,87,34,0.3)";
+            particles.forEach((p,i)=>{
+                p.update(); bgCtx.beginPath(); bgCtx.arc(p.x,p.y,p.size,0,Math.PI*2); bgCtx.fillStyle="#ff5722"; bgCtx.fill();
+                particles.slice(i+1).forEach(p2=>{ let d=Math.hypot(p.x-p2.x,p.y-p2.y); if(d<100){ bgCtx.beginPath(); bgCtx.moveTo(p.x,p.y); bgCtx.lineTo(p2.x,p2.y); bgCtx.stroke(); }});
+            });
+            requestAnimationFrame(animateBg);
+        }
+        animateBg();
+
+    </script>
+</body>
+</html>
