@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universe 3: Neural Labyrinth</title>
+    <title>NeuralVerse</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Black+Ops+One&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="https://i.postimg.cc/d1yRJWqp/Dot-transparent.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* --- 1. CORE STYLES --- */
@@ -348,7 +349,6 @@
         let player = {x:0, y:0};
         let goal = {x:0, y:0};
         let trail = []; 
-        let isDragging = false;
         let cols, rows, cellSize;
         
         let seedVal = 1;
@@ -684,37 +684,6 @@
             if(e.key === 'ArrowRight' || e.key === 'd') movePlayer(player.x+1, player.y);
         });
 
-        // Mouse Drag
-        function getPos(e) {
-            const rect = canvas.getBoundingClientRect();
-            const cx = e.touches ? e.touches[0].clientX : e.clientX;
-            const cy = e.touches ? e.touches[0].clientY : e.clientY;
-            return { x: Math.floor((cx-rect.left)/cellSize), y: Math.floor((cy-rect.top)/cellSize) };
-        }
-        canvas.addEventListener('mousedown', (e) => {
-            const p = getPos(e);
-            if(p.x === player.x && p.y === player.y) isDragging = true;
-        });
-        canvas.addEventListener('mousemove', (e) => {
-            if(isDragging) {
-                const p = getPos(e);
-                if(p.x !== player.x || p.y !== player.y) movePlayer(p.x, p.y);
-            }
-        });
-        window.addEventListener('mouseup', () => isDragging = false);
-        canvas.addEventListener('touchstart', (e) => {
-            const p = getPos(e);
-            if(p.x === player.x && p.y === player.y) isDragging = true;
-        }, {passive:false});
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            if(isDragging) {
-                const p = getPos(e);
-                if(p.x !== player.x || p.y !== player.y) movePlayer(p.x, p.y);
-            }
-        }, {passive:false});
-        window.addEventListener('touchend', () => isDragging = false);
-
         // --- DRAWING ---
         function drawMaze() {
             ctx.fillStyle = "rgba(10, 5, 2, 0.95)";
@@ -812,3 +781,4 @@
 </body>
 
 </html>
+
